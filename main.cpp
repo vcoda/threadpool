@@ -7,7 +7,7 @@
 #include "threadPool.h"
 
 #define ARRAY_SIZE 10000000ull
-#define REPEAT 10
+#define REPEAT 100
 
 static std::mt19937 rng;
 
