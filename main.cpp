@@ -23,7 +23,10 @@ Matrix randomMatrix()
     Matrix m;
     for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j)
-            m.m[i][j] = rng();
+        {
+            float f = rng() / (float)rng.max();
+            m.m[i][j] = f;
+        }
     return m;
 }
 
