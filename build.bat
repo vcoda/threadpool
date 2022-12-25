@@ -1,0 +1,1 @@
+cl /std:c++17 /EHsc /O2 /Ot threadPool.cpp main.cpp /link
