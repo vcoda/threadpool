@@ -8,6 +8,8 @@
 #include <functional>
 #include <future>
 
+#include <cassert>
+
 /* Thread-safe tasks queue. Tasks are enqueued by thread pool
    and dequeued by worker threads. When queue is drained,
    no more new task will be executed. */

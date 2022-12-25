@@ -1,5 +1,4 @@
 #include "threadPool.h"
-#include <cassert>
 #include <iostream>
 
 TaskQueue::TaskQueue() noexcept:

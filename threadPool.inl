@@ -1,17 +1,17 @@
 template<class Fn, class... Args>
 [[nodiscard]] auto ThreadPool::addTask(const char *description, Fn&& func, Args&&... args)
 {
-    assert(!tasks->isDraining());
+    assert(!tasks.isDraining());
     using InvokeResult = std::invoke_result_t<Fn, Args...>;
     auto asyncTask = std::make_shared<std::packaged_task<InvokeResult()>>(
         std::bind(std::forward<Fn>(func), std::forward<Args>(args)...));
     std::unique_lock<std::mutex> lock(waitMtx);
-    tasks->enqueue(
+    tasks.enqueue(
         [asyncTask, description]
         {   // Wrap into std::function()
             (*asyncTask)();
         });
-    return asyncTask->get_future();
+    return asyncTask.get_future();
 }
 
 template<class Fn, class... Args>
