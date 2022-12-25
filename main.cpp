@@ -50,16 +50,16 @@ uint64_t computeSingleThreaded(uint64_t count)
         a[i] = randomMatrix();
         b[i] = randomMatrix();
     }
-    uint64_t begin = rdtsc();
+    const uint64_t begin = rdtsc();
     {
-        for (uint64_t j = 0; j < count; ++j)
+        for (volatile uint64_t j = 0; j < count; ++j)
         {
-            for (uint64_t i = 0ull; i < ARRAY_SIZE; ++i)
+            for (volatile uint64_t i = 0ull; i < ARRAY_SIZE; ++i)
                 c[i] = multiply(a[i], b[i]);
         }
     }
-    uint64_t end = rdtsc();
-    float sum = sumAll(c);
+    const uint64_t end = rdtsc();
+    volatile float sum = sumAll(c);
     std::cout << "sum: " << sum << std::endl;
     return end - begin;
 }
@@ -75,12 +75,12 @@ uint64_t computeMultiThreaded(uint64_t count)
         a[i] = randomMatrix();
         b[i] = randomMatrix();
     }
-    uint64_t begin = rdtsc();
+    const uint64_t begin = rdtsc();
     {
-        for (uint64_t j = 0; j < count; ++j)
+        for (volatile uint64_t j = 0; j < count; ++j)
         {
             threadPool->parallelFor(0ull, ARRAY_SIZE,
-                [&a, &b, &c](uint64_t begin, uint64_t end)
+                [&](const uint64_t begin, const uint64_t end)
                 {
                     for (uint64_t i = begin; i < end; ++i)
                         c[i] = multiply(a[i], b[i]);
@@ -88,8 +88,8 @@ uint64_t computeMultiThreaded(uint64_t count)
             threadPool->waitAllTasks();
         }
     }
-    uint64_t end = rdtsc();
-    float sum = sumAll(c);
+    const uint64_t end = rdtsc();
+    volatile float sum = sumAll(c);
     std::cout << "sum: " << sum << std::endl;
     return end - begin;
 }
