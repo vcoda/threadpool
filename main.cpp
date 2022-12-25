@@ -46,14 +46,18 @@ void multiplyMatrices(Matrix *a, Matrix *b,
 }
 #pragma optimize("", on)
 
-float sumAll(const std::vector<Matrix>& v) noexcept
+double sum(const std::vector<Matrix>& a) noexcept
 {
-    float sum = 0.f;
-    for (const Matrix& m: v)
+    double total = 0.0;
+    for (const Matrix& m: a)
+    {
+        float sum = 0.f;
         for (int i = 0; i < 4; ++i)
-            for (int j = 0; j < 4; ++j)
-                sum += m.m[i][j];
-    return sum;
+        for (int j = 0; j < 4; ++j)
+            sum += m.m[i][j];
+        total += sum;
+    }
+    return total;
 }
 
 void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
@@ -65,7 +69,7 @@ void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat
     {
         multiplyMatrices(a.data(), b.data(), 0ull, arraySize);
     }
-    std::cout << "sum: " << sumAll(b) << std::endl;
+    std::cout << "sum: " << sum(b) << std::endl;
 }
 
 void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
@@ -83,7 +87,7 @@ void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
             });
         threadPool->waitAllTasks();
     }
-    std::cout << "sum: " << sumAll(b) << std::endl;
+    std::cout << "sum: " << sum(b) << std::endl;
 }
 
 int main()
