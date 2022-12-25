@@ -118,7 +118,7 @@ int main()
     const uint64_t clocksSt = computeSingleThreaded(arraySize, repeat);
     std::cout << "clocks elasped: " << clocksSt << std::endl;
     std::cout << "Run computations multi threaded..." << std::endl;
-    const uint64_t clocksMt = computeSingleThreaded(arraySize, repeat);
+    const uint64_t clocksMt = computeMultiThreaded(arraySize, repeat);
     std::cout << "clocks elasped: " << clocksMt << std::endl;
     std::cout << "Boost factor: " << clocksSt / (double)clocksMt << std::endl;
     return 0;
