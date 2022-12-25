@@ -2,12 +2,15 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <numeric>
 #include <vector>
 #include "matrix.h"
 #include "threadPool.h"
 
-#define ARRAY_SIZE 10000000ull
-#define REPEAT 100
+// Note: too large size of matrix array is cache unfriendly
+// which results in matrix multiplication to be memory bound.
+#define ARRAY_SIZE 100000ull
+#define REPEAT 10000ull
 
 static std::mt19937 rng;
 
@@ -44,11 +47,12 @@ void multiplyMatrices(Matrix *a, Matrix *b,
 }
 #pragma optimize("", on)
 
-double sum(const std::vector<Matrix>& a) noexcept
+double sum(const Matrix *a, volatile uint64_t begin, volatile uint64_t end) noexcept
 {
     double total = 0.0;
-    for (const Matrix& m: a)
+    for (uint64_t k = begin; k < end; ++k)
     {
+        const Matrix& m = a[k];
         float sum = 0.f;
         for (int i = 0; i < 4; ++i)
         for (int j = 0; j < 4; ++j)
@@ -58,38 +62,51 @@ double sum(const std::vector<Matrix>& a) noexcept
     return total;
 }
 
-void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
+uint64_t computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
 {
     std::vector<Matrix> a, b;
     generateMatrices(a, arraySize);
     generateMatrices(b, arraySize);
+    std::vector<double> sums(repeat);
+    const uint64_t begin = rdtsc();
     for (volatile uint64_t i = 0; i < repeat; ++i)
     {
         multiplyMatrices(a.data(), b.data(), 0ull, arraySize);
-        std::cout << "sum: " << sum(b) << std::endl;
+        sums[i] = sum(b.data(), 0ull, arraySize);
         if (i && (i % 20) == 0) // Regenerate periodically to avoid inf
             generateMatrices(b, arraySize);
     }
+    const uint64_t end = rdtsc();
+    std::cout << "sum: " << std::accumulate(sums.begin(), sums.end(), 0.) << std::endl;
+    return end - begin;
 }
 
-void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
+uint64_t computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
 {
     std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>();
     std::vector<Matrix> a, b;
     generateMatrices(a, arraySize);
     generateMatrices(b, arraySize);
+    std::vector<double> sums(repeat);
+    const uint64_t begin = rdtsc();
     for (volatile uint64_t i = 0; i < repeat; ++i)
     {
+        double rangeSum[128];
+        std::atomic<uint32_t> sumId = 0;
         threadPool->parallelFor(0ull, arraySize,
             [&](uint64_t begin, uint64_t end)
             {
                 multiplyMatrices(a.data(), b.data(), begin, end);
+                rangeSum[sumId++] = sum(b.data(), begin, end);
             });
-        threadPool->waitAllTasks();
-        std::cout << "sum: " << sum(b) << std::endl;
+        threadPool->waitAllTasks(0);
+        sums[i] = std::accumulate(rangeSum, rangeSum + sumId, 0.);
         if (i && (i % 20) == 0) // Regenerate periodically to avoid inf
             generateMatrices(b, arraySize);
     }
+    const uint64_t end = rdtsc();
+    std::cout << "sum: " << std::accumulate(sums.begin(), sums.end(), 0.) << std::endl;
+    return end - begin;
 }
 
 int main()
@@ -98,20 +115,10 @@ int main()
     volatile uint64_t repeat = REPEAT;
     rng.seed(static_cast<std::mt19937::result_type>(clock()));
     std::cout << "Run computations single threaded..." << std::endl;
-    uint64_t begin = rdtsc();
-    {
-        computeSingleThreaded(arraySize, repeat);
-    }
-    uint64_t end = rdtsc();
-    const uint64_t clocksSt = end - begin;
+    const uint64_t clocksSt = computeSingleThreaded(arraySize, repeat);
     std::cout << "clocks elasped: " << clocksSt << std::endl;
     std::cout << "Run computations multi threaded..." << std::endl;
-    begin = rdtsc();
-    {
-        computeMultiThreaded(arraySize, repeat);
-    }
-    end = rdtsc();
-    const uint64_t clocksMt = end - begin;
+    const uint64_t clocksMt = computeSingleThreaded(arraySize, repeat);
     std::cout << "clocks elasped: " << clocksMt << std::endl;
     std::cout << "Boost factor: " << clocksSt / (double)clocksMt << std::endl;
     return 0;
