@@ -13,6 +13,7 @@
 #define REPEAT 10000ull
 
 static std::mt19937 rng;
+static std::unique_ptr<ThreadPool> threadPool;
 
 uint64_t rdtsc() noexcept
 {
@@ -83,7 +84,6 @@ uint64_t computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t re
 
 uint64_t computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
 {
-    std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>();
     std::vector<Matrix> a, b;
     generateMatrices(a, arraySize);
     generateMatrices(b, arraySize);
@@ -114,6 +114,7 @@ int main()
     volatile uint64_t arraySize = ARRAY_SIZE;
     volatile uint64_t repeat = REPEAT;
     rng.seed(static_cast<std::mt19937::result_type>(clock()));
+    threadPool = std::make_unique<ThreadPool>();
     std::cout << "Run computations single threaded..." << std::endl;
     const uint64_t clocksSt = computeSingleThreaded(arraySize, repeat);
     std::cout << "clocks elasped: " << clocksSt << std::endl;
