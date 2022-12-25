@@ -65,11 +65,13 @@ void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat
     std::vector<Matrix> a, b;
     generateMatrices(a, arraySize);
     generateMatrices(b, arraySize);
-    for (volatile uint64_t j = 0; j < repeat; ++j)
+    for (volatile uint64_t i = 0; i < repeat; ++i)
     {
         multiplyMatrices(a.data(), b.data(), 0ull, arraySize);
+        std::cout << "sum: " << sum(b) << std::endl;
+        if (i && (i % 20) == 0) // Regenerate periodically to avoid inf
+            generateMatrices(b, arraySize);
     }
-    std::cout << "sum: " << sum(b) << std::endl;
 }
 
 void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
@@ -78,7 +80,7 @@ void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
     std::vector<Matrix> a, b;
     generateMatrices(a, arraySize);
     generateMatrices(b, arraySize);
-    for (volatile uint64_t j = 0; j < repeat; ++j)
+    for (volatile uint64_t i = 0; i < repeat; ++i)
     {
         threadPool->parallelFor(0ull, arraySize,
             [&](uint64_t begin, uint64_t end)
@@ -86,8 +88,10 @@ void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
                 multiplyMatrices(a.data(), b.data(), begin, end);
             });
         threadPool->waitAllTasks();
+        std::cout << "sum: " << sum(b) << std::endl;
+        if (i && (i % 20) == 0) // Regenerate periodically to avoid inf
+            generateMatrices(b, arraySize);
     }
-    std::cout << "sum: " << sum(b) << std::endl;
 }
 
 int main()
