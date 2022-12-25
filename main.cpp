@@ -30,6 +30,20 @@ Matrix randomMatrix()
     return m;
 }
 
+void generateMatrices(std::vector<Matrix>& a, volatile uint64_t arraySize)
+{
+    a.resize(arraySize);
+    for (volatile uint64_t i = 0ull; i < arraySize; ++i)
+        a[i] = randomMatrix();
+}
+
+void multiplyMatrices(std::vector<Matrix>& a, std::vector<Matrix>& b,
+    volatile uint64_t begin, volatile uint64_t end) noexcept
+{
+    for (volatile uint64_t i = begin; i < end; ++i)
+        b[i] = multiply(a[i], b[i]);
+}
+
 float sumAll(const std::vector<Matrix>& v) noexcept
 {
     float sum = 0.f;
@@ -40,68 +54,56 @@ float sumAll(const std::vector<Matrix>& v) noexcept
     return sum;
 }
 
-uint64_t computeSingleThreaded(uint64_t count)
+void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
 {
-    std::vector<Matrix> a(ARRAY_SIZE);
-    std::vector<Matrix> b(ARRAY_SIZE);
-    std::vector<Matrix> c(ARRAY_SIZE);
-    for (uint64_t i = 0ull; i < ARRAY_SIZE; ++i)
-    {   // Initialize matrices
-        a[i] = randomMatrix();
-        b[i] = randomMatrix();
-    }
-    const uint64_t begin = rdtsc();
+    std::vector<Matrix> a, b;
+    generateMatrices(a, arraySize);
+    generateMatrices(b, arraySize);
+    for (volatile uint64_t j = 0; j < repeat; ++j)
     {
-        for (volatile uint64_t j = 0; j < count; ++j)
-        {
-            for (volatile uint64_t i = 0ull; i < ARRAY_SIZE; ++i)
-                c[i] = multiply(a[i], b[i]);
-        }
+        multiplyMatrices(a, b, 0ull, arraySize);
     }
-    const uint64_t end = rdtsc();
-    volatile float sum = sumAll(c);
-    std::cout << "sum: " << sum << std::endl;
-    return end - begin;
+    std::cout << "sum: " << sumAll(b) << std::endl;
 }
 
-uint64_t computeMultiThreaded(uint64_t count)
+void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
 {
     std::unique_ptr<ThreadPool> threadPool = std::make_unique<ThreadPool>();
-    std::vector<Matrix> a(ARRAY_SIZE);
-    std::vector<Matrix> b(ARRAY_SIZE);
-    std::vector<Matrix> c(ARRAY_SIZE);
-    for (uint64_t i = 0ull; i < ARRAY_SIZE; ++i)
-    {   // Initialize matrices
-        a[i] = randomMatrix();
-        b[i] = randomMatrix();
-    }
-    const uint64_t begin = rdtsc();
+    std::vector<Matrix> a, b;
+    generateMatrices(a, arraySize);
+    generateMatrices(b, arraySize);
+    for (volatile uint64_t j = 0; j < repeat; ++j)
     {
-        for (volatile uint64_t j = 0; j < count; ++j)
-        {
-            threadPool->parallelFor(0ull, ARRAY_SIZE,
-                [&](const uint64_t begin, const uint64_t end)
-                {
-                    for (uint64_t i = begin; i < end; ++i)
-                        c[i] = multiply(a[i], b[i]);
-                });
-            threadPool->waitAllTasks();
-        }
+        threadPool->parallelFor(0ull, arraySize,
+            [&](uint64_t begin, uint64_t end)
+            {
+                multiplyMatrices(a, b, begin, end);
+            });
+        threadPool->waitAllTasks();
     }
-    const uint64_t end = rdtsc();
-    volatile float sum = sumAll(c);
-    std::cout << "sum: " << sum << std::endl;
-    return end - begin;
+    std::cout << "sum: " << sumAll(b) << std::endl;
 }
 
 int main()
 {
+    volatile uint64_t arraySize = ARRAY_SIZE;
+    volatile uint64_t repeat = REPEAT;
     rng.seed(static_cast<std::mt19937::result_type>(clock()));
     std::cout << "Run computations single threaded..." << std::endl;
-    const uint64_t clocksSt = computeSingleThreaded(REPEAT);
+    uint64_t begin = rdtsc();
+    {
+        computeSingleThreaded(arraySize, repeat);
+    }
+    uint64_t end = rdtsc();
+    const uint64_t clocksSt = end - begin;
     std::cout << "clocks elasped: " << clocksSt << std::endl;
     std::cout << "Run computations multi threaded..." << std::endl;
-    const uint64_t clocksMt = computeMultiThreaded(REPEAT);
+    begin = rdtsc();
+    {
+        computeMultiThreaded(arraySize, repeat);
+    }
+    end = rdtsc();
+    const uint64_t clocksMt = end - begin;
     std::cout << "clocks elasped: " << clocksMt << std::endl;
     std::cout << "Boost factor: " << clocksSt / (double)clocksMt << std::endl;
     return 0;
