@@ -37,12 +37,14 @@ void generateMatrices(std::vector<Matrix>& a, volatile uint64_t arraySize)
         a[i] = randomMatrix();
 }
 
-void multiplyMatrices(std::vector<Matrix>& a, std::vector<Matrix>& b,
+#pragma optimize("", off)
+void multiplyMatrices(Matrix *a, Matrix *b,
     volatile uint64_t begin, volatile uint64_t end) noexcept
 {
     for (volatile uint64_t i = begin; i < end; ++i)
         b[i] = multiply(a[i], b[i]);
 }
+#pragma optimize("", on)
 
 float sumAll(const std::vector<Matrix>& v) noexcept
 {
@@ -61,7 +63,7 @@ void computeSingleThreaded(volatile uint64_t arraySize, volatile uint64_t repeat
     generateMatrices(b, arraySize);
     for (volatile uint64_t j = 0; j < repeat; ++j)
     {
-        multiplyMatrices(a, b, 0ull, arraySize);
+        multiplyMatrices(a.data(), b.data(), 0ull, arraySize);
     }
     std::cout << "sum: " << sumAll(b) << std::endl;
 }
@@ -77,7 +79,7 @@ void computeMultiThreaded(volatile uint64_t arraySize, volatile uint64_t repeat)
         threadPool->parallelFor(0ull, arraySize,
             [&](uint64_t begin, uint64_t end)
             {
-                multiplyMatrices(a, b, begin, end);
+                multiplyMatrices(a.data(), b.data(), begin, end);
             });
         threadPool->waitAllTasks();
     }
