@@ -11,7 +11,7 @@
 
 static std::mt19937 rng;
 
-uint64_t rdtsc()
+uint64_t rdtsc() noexcept
 {
     int reg[4];
     __cpuid(reg, 0); // Insert barrier
