@@ -18,15 +18,13 @@ uint64_t rdtsc() noexcept
     return __rdtsc();
 }
 
-Matrix randomMatrix()
+inline Matrix randomMatrix()
 {
+    constexpr float rcpmax = 1.f/(rng.max() - rng.min());
     Matrix m;
     for (int i = 0; i < 4; ++i)
-        for (int j = 0; j < 4; ++j)
-        {
-            float f = rng() / (float)rng.max();
-            m.m[i][j] = f;
-        }
+    for (int j = 0; j < 4; ++j)
+        m.m[i][j] = rng() * rcpmax;
     return m;
 }
 
